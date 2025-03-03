@@ -22,7 +22,7 @@ app.use(cors()); //mainn cross origin middlware to allow traffic form anywhere
 const PORT = 5000;
 
 
-//middlewares
+//middlewares trakcs
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
