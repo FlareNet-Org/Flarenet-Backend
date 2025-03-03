@@ -128,7 +128,7 @@ app.get("/projects/:ownerId", async function (req, res) {
                 message: "Invalid ownerId ptovidee",
             });
         }
-        //otherwise fetach all projects from the owner
+        //otherwise fetach all projects from the owner as per necessatity
         const projects = await prisma.project.findMany({
             where: { ownerId },
             include: {
