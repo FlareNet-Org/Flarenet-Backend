@@ -17,7 +17,7 @@ const deploymentValidationRoutes = require('./routes/deploymentValidationRoutes'
 const { Worker: ThreadWorker } = require('worker_threads');
 
 const app = express();
-app.use(cors()); //mainn cross origin middlware to allow traffic form anywhere
+app.use(cors({ origin: '*' })); //mainn cross origin middlware to allow traffic form anywhere
 
 const PORT = 5000;
 
@@ -190,7 +190,7 @@ app.post('/deploy', async (req, res) => {
             value
         })) : [];
         //generate url if user provided custom uri handle logic for it otherwiswe make use of default name
-        const generatedUri = validatedData.url || `http://${validatedData.projectId}.localhost:9000`;
+        const generatedUri = validatedData.url || `https://${validatedData.projectId}.localhost:9000`;
 
         // Step 2: Check if project exists
         const project = await prisma.project.findUnique({
