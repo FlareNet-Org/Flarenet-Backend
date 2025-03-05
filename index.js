@@ -14,6 +14,7 @@ const githubRoutes = require('./routes/githubRoutes');
 const authRoutes = require('./routes/autthRoutes');
 const chatbotRoutes = require("./routes/chatBotRoutes");
 const deploymentValidationRoutes = require('./routes/deploymentValidationRoutes');
+const aiAnalysisRoutes = require('./routes/aiAnalysisRoutes');
 const { Worker: ThreadWorker } = require('worker_threads');
 
 const app = express();
@@ -30,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/github', githubRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/validdeployment', deploymentValidationRoutes);
-
+app.use('/api/ai-analysis', aiAnalysisRoutes);
 //chatBot rouutes
 app.use('/api/llm', chatbotRoutes);
 
