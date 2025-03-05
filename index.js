@@ -34,7 +34,7 @@ app.use('/api/validdeployment', deploymentValidationRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
 //chatBot rouutes
 app.use('/api/llm', chatbotRoutes);
-
+//auth routes
 
 async function main() {
     // Log to indicate the connection attempt
