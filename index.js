@@ -1,13 +1,9 @@
-require('dotenv').config();
 const express = require('express');
 const clickHouseClient = require('./utils/clickHouseClient');
-const Redis = require('ioredis');
 const { prisma } = require('./utils/prismaClient');
 const { z } = require("zod");
-const kafka = require('./utils/kafkaClient');
-const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+require('dotenv').config({ path: path.resolve(__dirname, '.env.development') });
 const cors = require('cors');
 const buildQueue = require('./queues/buildQueue');
 const githubRoutes = require('./routes/githubRoutes');

@@ -1,4 +1,5 @@
-require('dotenv').config({ path: '../.env' });
+const path=require('path');
+require('dotenv').config({path:path.resolve(__dirname,'../.env.development')});
 const { ChatGroq } = require("@langchain/groq");
 const { createAdvancedAgent } = require("../services/llm/agent.service");
 const { BufferMemory } = require("langchain/memory");// Import MemorySaver

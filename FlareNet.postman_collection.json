@@ -1,0 +1,109 @@
+{
+	"info": {
+		"_postman_id": "8531093c-db6e-4ae6-a01e-87d11c59aaf2",
+		"name": "FlareNet",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "33191437"
+	},
+	"item": [
+		{
+			"name": "create project",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\":\"todo app latest llm branch\",\r\n    \"gitUrl\":\"https://github.com/sahil28032005/ToDo-application.git\",\r\n    \"description\":\"for api testing\",\r\n    \"ownerId\":4\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:5000/create-project",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"create-project"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "chat",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"message\":\"deploy my project as my project name is dummy  and description is ac  ownerid is 9 and my gitUrl is https://github.com/sahil28032005 start my deployment\",\r\n    \"userId\":1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:5000/api/llm/chat",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"llm",
+						"chat"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "deploy",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"projectId\":\"7cb8232a-97af-4319-9f26-5c823e578e50\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:5000/deploy",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"deploy"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get ai reasoning",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "github_auth",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}

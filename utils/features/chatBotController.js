@@ -2,7 +2,7 @@ const { prisma } = require("../prismaClient");
 const buildQueue = require("../../queues/buildQueue");
 const { llm, memory } = require("../../utils/langchainConfig");
 const Redis = require("ioredis");
-require('dotenv').config({ path: 'd:/Node  js/version control build service/api-server-spinner/.env' });
+require('dotenv').config();
 
 // deploy my project as my project name is shopify  and description is e com project  ownerid is 1 and my gitUrl is https://github.com/sahil28032005/shopify.git start my deployment 
 const redis = new Redis(process.env.REDIS_HOST, {

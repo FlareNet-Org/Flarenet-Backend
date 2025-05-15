@@ -4,3 +4,4 @@ node_modules/
 *.cert
 *.key
 .env.production
+.env.development
