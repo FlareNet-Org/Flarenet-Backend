@@ -7,7 +7,7 @@ const { BufferMemory } = require("langchain/memory");// Import MemorySaver
 console.log(process.env.GROQ_API_KEY);
 //llm configuration
 const llm = new ChatGroq({
-    model: "mixtral-8x7b-32768",
+    model: "mistral-saba-24b",
     apiKey: process.env.GROQ_API_KEY,
     temperature: 0.3
 });
