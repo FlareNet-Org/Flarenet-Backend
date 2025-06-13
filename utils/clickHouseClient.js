@@ -1,11 +1,14 @@
 const { createClient } = require('@clickhouse/client');
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+require('dotenv').config({ 
+  path: path.resolve(__dirname, '../.env.development') 
+});
 
 const clickHouseClient = createClient({
-    url: process.env.CH_URI, // Replace with your EC2 public IP
-    username: process.env.CH_USERNAME, // Replace with your
-    password: process.env.CH_PASS, // Replace with your
-    format: 'json', // Response format
+    url: process.env.CH_URI,
+    username: process.env.CH_USERNAME,
+    password: process.env.CH_PASS,
+    format: 'json',
 });
 
 
