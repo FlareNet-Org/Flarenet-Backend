@@ -2,26 +2,29 @@ const express = require("express");
 const { chatbotController } = require("../utils/features/chatBotController");
 const router = express.Router();
 const createRateLimiter = require("../middlewares/tokenBucketLimiter");
-
+const colors = require('colors');
 
 // Rate limiter configuration for chat endpoint
 
 const chatRateLimiter = createRateLimiter({
-    defaultBucketSize: 5,        // Smaller bucket for easier testing
+    defaultBucketSize: 10,        // Default bucket size
     defaultRefillRate: 0.1,      // 1 token per 10 seconds
     keyGenerator: (req) => {
         // Use API key if available, otherwise normalize IP
-        return req.headers['x-api-key'] || 
+        const identifier = req.headers['x-api-key'] || 
                (req.ip.startsWith('::ffff:') ? req.ip.substring(7) : req.ip);
+        console.log(`Using identifier: ${identifier} for rate limiting`);
+        return identifier;
     },
     planLimiter: (req) => {
         // Example: Different limits based on user plan
-        const userPlan = req.user?.plan || 'free';
+        const userPlan = req.body?.plan || 'free';
         const limits = {
-            free: { bucketSize: 5, refillRate: 0.1 },     // 5 requests, refills 1 per 10 sec
+            free: { bucketSize: 10, refillRate: 0.1 },     // 10 requests, refills 1 per 10 sec
             pro: { bucketSize: 30, refillRate: 0.5 },     // 30 requests, refills 1 per 2 sec
             enterprise: { bucketSize: 60, refillRate: 1 } // 60 requests, refills 1 per sec
         };
+        console.log(`user plan is ${colors.green(userPlan)} with bucketSize: ${colors.yellow(limits[userPlan].bucketSize)}, refillRate: ${colors.yellow(limits[userPlan].refillRate)}`);
         return limits[userPlan] || limits.free;
     },
     failOpen: false // Don't allow requests if Redis is down - better for testing

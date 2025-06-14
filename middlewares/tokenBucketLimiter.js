@@ -22,6 +22,7 @@ class TokenBucketLimiter {
 
     // Helper to generate Redis key
     getKey(identifier) {
+        console.log('identifier generated my request ip identifier', identifier);
         return `${this.keyPrefix}${identifier}`;
     }
 
@@ -186,6 +187,7 @@ const createRateLimiter = (options = {}) => {
                 limits.bucketSize,
                 limits.refillRate
             );
+            //after isAlloed success we will proceed further
 
             // Add rate limit headers
             res.set('X-RateLimit-Remaining', result.remaining);
