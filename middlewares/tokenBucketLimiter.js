@@ -187,6 +187,7 @@ const createRateLimiter = (options = {}) => {
                 limits.bucketSize,
                 limits.refillRate
             );
+            //after isAlloed success we will proceed further
 
             // Add rate limit headers
             res.set('X-RateLimit-Remaining', result.remaining);
