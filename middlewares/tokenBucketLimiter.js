@@ -22,6 +22,7 @@ class TokenBucketLimiter {
 
     // Helper to generate Redis key
     getKey(identifier) {
+        console.log('identifier generated my request ip identifier', identifier);
         return `${this.keyPrefix}${identifier}`;
     }
 
