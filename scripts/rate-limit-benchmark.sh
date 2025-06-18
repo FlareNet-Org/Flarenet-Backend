@@ -4,7 +4,7 @@
 # This script tests rate limiting performance under load
 
 # Configuration
-API_URL="http://localhost:3000/chat"
+API_URL="http://localhost:5000/api/llm/chat"
 CONCURRENT_USERS=5
 REQUESTS_PER_USER=20
 TOTAL_REQUESTS=$((CONCURRENT_USERS * REQUESTS_PER_USER))
