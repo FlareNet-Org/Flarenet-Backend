@@ -1,78 +1,172 @@
-const axios = require('axios');
-const { Octokit } = require("@octokit/core"); // Import Octokit
-//use octakit as github officials siuggest that
+const ReactProjectValidator = require('../services/validation/reactProjectValidator');
+
+/**
+ * Middleware to validate if a repository is a React project
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with validation result
+ */
 const validateReactProject = async (req, res) => {
-    const { owner, repo } = req.query;
-    const githubToken = req.headers.authorization;
-
-    if (!githubToken) {
-        return res.status(401).json({ message: "GitHub token is required!" });
-    }
-    if (!owner || !repo) {
-        return res.status(400).json({ message: "Owner and repo are required!" });
-    }
-
     try {
-        const packageJson = await getPackageJson(owner, repo, githubToken);
-        if (!packageJson) {
-            return res.status(404).json({ message: "package.json not found" });
+        const { owner, repo } = req.query;
+        // Get token from Authorization header (Bearer token)
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.startsWith('Bearer ') 
+            ? authHeader.substring(7) 
+            : authHeader;
+
+        // Input validation
+        if (!token) {
+            return res.status(401).json({ 
+                success: false,
+                message: "GitHub token is required in Authorization header"
+            });
         }
 
-        const isReact = packageJson.dependencies?.react || packageJson.devDependencies?.react;
-        if (!isReact) {
-            return res.status(400).json({ message: "This is not a React project!" });
+        if (!owner || !repo) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Repository owner and name are required"
+            });
         }
 
-        const { framework, buildCommand } = detectReactFramework(packageJson);
-        res.json({ message: "Valid React project", framework, buildCommand });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+        // Create validator instance
+        const validator = new ReactProjectValidator({ cacheTTL: 3600 });
+        
+        // Validate repository
+        const result = await validator.validateReactProject({ owner, repo, token });
 
-//detect as subSection of which type of react project is this vie/next/create-react/etc.
-const detectReactFramework = (packageJson) => {
-    if (packageJson.dependencies?.vite || packageJson.devDependencies?.vite) {
-        return { framework: "Vite", buildCommand: "npm run build" };
-    } else if (packageJson.dependencies?.["react-scripts"]) {
-        return { framework: "Create React App", buildCommand: "npm run build" };
-    } else if (packageJson.dependencies?.next) {
-        return { framework: "Next.js", buildCommand: "npm run build" };
-    } else if (packageJson.dependencies?.gatsby) {
-        return { framework: "Gatsby", buildCommand: "npm run build" };
-    } else {
-        return { framework: "Unknown", buildCommand: "npm run build" };
-    }
-};
+        if (!result.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: result.error || "Invalid React project"
+            });
+        }
 
-
-//helper methodsfo github api and shnnc with auth tookens
-const getPackageJson = async (owner, repo, githubToken) => {
-    try {
-        //creating octakit instance here usng token
-        const octokit = new Octokit({
-            auth: githubToken // Replace with your token
-        });
-
-        // console.log('Getting package json method');
-        const response = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-            owner: owner,   // Your GitHub username
-            repo: repo, // Your repository
-            path: 'package.json',     // Path to package.json file
-            headers: {
-                'X-GitHub-Api-Version': '2022-11-28'
+        // Return success response
+        return res.status(200).json({
+            success: true,
+            message: "Valid React project",
+            data: {
+                framework: result.framework,
+                buildCommand: result.buildCommand,
+                dependencies: result.dependencies
             }
         });
-
-        // Decode base64 content
-        const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
-        return JSON.parse(content);
-        console.log(JSON.parse(content)); // Parsed package.json
     } catch (error) {
-        console.error("Error fetching package.json:", error);
-        return null;
+        console.error('React project validation error:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('rate limit')) {
+            return res.status(429).json({
+                success: false,
+                message: "GitHub API rate limit exceeded. Please try again later."
+            });
+        }
+        
+        if (error.message.includes('not found')) {
+            return res.status(404).json({
+                success: false,
+                message: error.message
+            });
+        }
+        
+        if (error.message.includes('token')) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired GitHub token"
+            });
+        }
+        
+        // Generic error response
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error during validation",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
+
+/**
+ * Middleware to validate a GitHub repository URL
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with validation result
+ */
+const validateReactProjectByUrl = async (req, res) => {
+    try {
+        const { url } = req.query;
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.startsWith('Bearer ') 
+            ? authHeader.substring(7) 
+            : authHeader;
+
+        // Input validation
+        if (!token) {
+            return res.status(401).json({ 
+                success: false,
+                message: "GitHub token is required in Authorization header"
+            });
+        }
+
+        if (!url) {
+            return res.status(400).json({ 
+                success: false,
+                message: "GitHub repository URL is required"
+            });
+        }
+
+        // Create validator instance
+        const validator = new ReactProjectValidator({ cacheTTL: 3600 });
+        
+        // Validate repository URL
+        const result = await validator.validateReactProjectByUrl(url, token);
+
+        if (!result.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: result.error || "Invalid React project"
+            });
+        }
+
+        // Return success response
+        return res.status(200).json({
+            success: true,
+            message: "Valid React project",
+            data: {
+                framework: result.framework,
+                buildCommand: result.buildCommand,
+                dependencies: result.dependencies
+            }
+        });
+    } catch (error) {
+        console.error('React project validation error:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('rate limit')) {
+            return res.status(429).json({
+                success: false,
+                message: "GitHub API rate limit exceeded. Please try again later."
+            });
+        }
+        
+        if (error.message.includes('URL')) {
+            return res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+        
+        // Generic error response
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error during validation",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 module.exports = {
-    validateReactProject
+    validateReactProject,
+    validateReactProjectByUrl
 };

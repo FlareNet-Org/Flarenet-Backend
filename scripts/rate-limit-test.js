@@ -43,7 +43,7 @@ async function testPlan(plan, apiKey, expectedLimit, description) {
         try {
             //requestor logic
             const response = await axios.post(API_URL, {
-                message: 'hello', 
+                message: 'hello',
                 userId: 1,
                 plan: plan // Include plan in the request body
             },
@@ -147,7 +147,16 @@ async function main() {
         // await testPlan('free', 'free-plan-api-key', '10', 'Free plan with 10 requests per minute refils 1 per 10 sec');
 
         // Test with pro plan
-        await testPlan('pro', 'pro-plan-api-key', '30', '30 requests, refills 1 per 2 sec');
+        // await testPlan('pro', 'pro-plan-api-key', '30', '30 requests, refills 1 per 2 sec');
+
+        // Test with enterprise plan
+        // await testPlan('enterprise', 'enterprise-plan-api-key', '60', '60 requests, refills 1 per sec');
+
+        //test with no api key
+        await testNoApiKey();
+        console.log(colors.blue('\n==========================================='));
+        console.log(colors.green('Rate Limiting Test Suite Completed'));
+        console.log(colors.blue('==========================================='));
     }
     catch (e) {
         console.error('Error running tests:', e.message);
