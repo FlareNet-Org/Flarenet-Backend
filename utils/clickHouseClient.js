@@ -5,9 +5,9 @@ require('dotenv').config({
 });
 
 const clickHouseClient = createClient({
-    url: process.env.CH_URI,
-    username: process.env.CH_USERNAME,
-    password: process.env.CH_PASS,
+    url: process.env.CH_URI || 'http://localhost:8123',
+    username: process.env.CH_USERNAME || 'default',
+    password: process.env.CH_PASS || 'default',
     format: 'json',
 });
 

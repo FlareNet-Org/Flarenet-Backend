@@ -31,7 +31,7 @@ class ReactProjectValidator {
         throw new Error('GitHub token is required');
       }
 
-      // Get package.json from repository
+      // Get package.json from repository for this we are using helper srevice file
       const packageJson = await this.githubService.getFileContent({
         owner,
         repo,
@@ -39,8 +39,18 @@ class ReactProjectValidator {
         token
       });
 
+      console.log('Validating package.json:', {
+        name: packageJson.name,
+        hasWorkspaces: Boolean(packageJson.workspaces),
+        hasDependencies: Boolean(packageJson.dependencies),
+        hasDevDependencies: Boolean(packageJson.devDependencies),
+        hasScripts: Boolean(packageJson.scripts)
+      });
+
       // Check if it's a React project
       const isReact = this.hasReactDependency(packageJson);
+      console.log('Is React project:', isReact);
+      
       if (!isReact) {
         throw new Error('This is not a React project');
       }
@@ -73,10 +83,46 @@ class ReactProjectValidator {
   hasReactDependency(packageJson) {
     if (!packageJson) return false;
     
-    return Boolean(
-      packageJson.dependencies?.react || 
-      packageJson.devDependencies?.react
-    );
+    // Direct React dependency check
+    if (packageJson.dependencies?.react || packageJson.devDependencies?.react) {
+      return true;
+    }
+    
+    // Check for React-related packages
+    const reactRelatedPackages = [
+      'react-dom', 'react-scripts', 'react-native', 
+      '@testing-library/react', 'react-router', 'react-redux'
+    ];
+    
+    for (const pkg of reactRelatedPackages) {
+      if (packageJson.dependencies?.[pkg] || packageJson.devDependencies?.[pkg]) {
+        return true;
+      }
+    }
+    
+    // Check for workspaces (monorepo structure)
+    if (packageJson.workspaces) {
+      return true; // If it has workspaces, assume it might contain React in subpackages
+    }
+    
+    // Check for React-related scripts
+    if (packageJson.scripts) {
+      const scriptValues = Object.values(packageJson.scripts).join(' ').toLowerCase();
+      if (scriptValues.includes('react-scripts') || 
+          scriptValues.includes('react ') || 
+          scriptValues.includes(' react')) {
+        return true;
+      }
+    }
+    
+    // Check package name for React-related keywords
+    if (packageJson.name && 
+        (packageJson.name.includes('react') || 
+         packageJson.name.includes('cra'))) {
+      return true;
+    }
+    
+    return false;
   }
 
   /**
@@ -156,7 +202,7 @@ class ReactProjectValidator {
    */
   async validateReactProjectByUrl(url, token) {
     try {
-      const { owner, repo } = this.githubService.parseGitHubUrl(url);
+      const { owner, repo } = this.githubService.parseGitHubUrl(url); //here this will return {owener and repo}
       return await this.validateReactProject({ owner, repo, token });
     } catch (error) {
       return {
