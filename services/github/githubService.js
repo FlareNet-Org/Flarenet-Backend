@@ -88,10 +88,16 @@ class GitHubService {
       if (response.status !== 200) {
         throw new Error(`GitHub API returned status ${response.status}`);
       }
+      else{
+        // console.log("response from github failing stepper",response);
+      }
+      
 
       // Decode base64 content
       const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
       const parsedContent = JSON.parse(content);
+
+      console.log("parsed content from github",parsedContent);
       
       // Cache the result if Redis is available
       if (isRedisAvailable()) {

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <users>
+        <default>
+            <password>default</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+        </default>
+        <admin>
+            <password>admin</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+        </admin>
+    </users>
+</clickhouse> 

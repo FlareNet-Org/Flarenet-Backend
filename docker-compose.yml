@@ -1,13 +1,68 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: flarenet-backend:latest
+  redis:
+    image: redis:latest
     ports:
-      - "5000:5000"
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
     environment:
-      - NODE_ENV=production
-      - REDIS_CONFIG_MAXMEMORY_POLICY=noeviction
-    env_file:
-      - .env.production
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=flarenet
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    command: postgres -c 'max_connections=100' -c 'shared_buffers=128MB'
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse-config:/etc/clickhouse-server/config.d
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_USER_ADMIN=admin
+      - CLICKHOUSE_PASSWORD_ADMIN=admin
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: always
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka:2.13-2.8.1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "builder-logs:1:1,deployment-log-group:1:1"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zookeeper
+
+volumes:
+  redis-data:
+  postgres-data:
+  clickhouse-data:

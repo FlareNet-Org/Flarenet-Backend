@@ -34,7 +34,7 @@ const validateReactProject = async (req, res) => {
         const validator = new ReactProjectValidator({ cacheTTL: 3600 });
         
         // Validate repository
-        const result = await validator.validateReactProject({ owner, repo, token });
+        const result = await validator.validateReactProject({ owner, repo, token }); //debuggging stepper
 
         if (!result.isValid) {
             return res.status(400).json({
