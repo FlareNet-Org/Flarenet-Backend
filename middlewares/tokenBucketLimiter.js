@@ -1,18 +1,31 @@
-const Redis = require('ioredis');
 const { promisify } = require('util');
+const { getRedisClient, isRedisAvailable } = require('../utils/redisClient');
 
 class TokenBucketLimiter {
     constructor(options = {}) {
-        this.redis = options.redis || new Redis(process.env.REDIS_HOST);
+        // Force Redis initialization if not already done
+        if (!isRedisAvailable()) {
+            console.log('[Rate Limiter] Redis not ready, attempting to initialize...');
+            // Try to initialize Redis
+            this.redis = getRedisClient();
+        } else {
+            this.redis = options.redis || getRedisClient();
+            console.log('[Rate Limiter] Redis is available');
+        }
         
-        // Add connection checks
-        this.redis.on('connect', () => {
-            console.log('[Rate Limiter] Redis connected successfully');
-        });
-        
-        this.redis.on('error', (err) => {
-            console.error('[Rate Limiter] Redis connection error:', err);
-        });
+        // Check if Redis is available after initialization attempt
+        if (!this.redis) {
+            console.warn('[Rate Limiter] No Redis client available. Rate limiting will be disabled.');
+        } else {
+            console.log('[Rate Limiter] Using Redis client with status:', this.redis.status);
+            
+            // Add a listener for the ready event if the client exists
+            if (this.redis.status !== 'ready') {
+                this.redis.once('ready', () => {
+                    console.log('[Rate Limiter] Redis client is now ready');
+                });
+            }
+        }
         
         this.defaultBucketSize = options.defaultBucketSize || 100;
         this.defaultRefillRate = options.defaultRefillRate || 10;
@@ -22,7 +35,10 @@ class TokenBucketLimiter {
 
     // Helper to generate Redis key
     getKey(identifier) {
-        console.log('identifier generated my request ip identifier', identifier);
+        // Only log in development environment
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('identifier generated my request ip identifier', identifier);
+        }
         return `${this.keyPrefix}${identifier}`;
     }
 
@@ -47,7 +63,9 @@ class TokenBucketLimiter {
                 await this.redis.hmset(key, newBucket);
                 await this.redis.expire(key, this.keyExpiry);
                 
-                console.log('[Rate Limiter] Created new bucket:', newBucket);
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log('[Rate Limiter] Created new bucket:', newBucket);
+                }
                 return newBucket;
             }
 
@@ -65,7 +83,9 @@ class TokenBucketLimiter {
             if (isNaN(bucket.bucketSize)) bucket.bucketSize = bucketSize;
             if (isNaN(bucket.refillRate)) bucket.refillRate = refillRate;
 
-            console.log('[Rate Limiter] Retrieved existing bucket:', bucket);
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('[Rate Limiter] Retrieved existing bucket:', bucket);
+            }
             return bucket;
         } catch (error) {
             console.error('[Rate Limiter] Error in getBucket:', error);
@@ -91,9 +111,11 @@ class TokenBucketLimiter {
             bucket.bucketSize,
             bucket.tokens + (timePassed * bucket.refillRate)
         );
-        console.log('[Rate Limiter] Time passed:', timePassed, 'seconds');
-        console.log('[Rate Limiter] Tokens before refill:', bucket.tokens);
-        console.log('[Rate Limiter] Tokens after refill:', newTokens);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('[Rate Limiter] Time passed:', timePassed, 'seconds');
+            console.log('[Rate Limiter] Tokens before refill:', bucket.tokens);
+            console.log('[Rate Limiter] Tokens after refill:', newTokens);
+        }
         return newTokens;
     }
 
@@ -113,15 +135,21 @@ class TokenBucketLimiter {
             bucket.tokens + tokensToAdd
         );
         
-        console.log(`[Rate Limiter] Time passed: ${timePassed.toFixed(3)} seconds`);
-        console.log(`[Rate Limiter] Tokens before refill: ${bucket.tokens.toFixed(3)}`);
-        console.log(`[Rate Limiter] Tokens to add: ${tokensToAdd.toFixed(3)}`);
-        console.log(`[Rate Limiter] Tokens after refill: ${newTokens.toFixed(3)}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Rate Limiter] Time passed: ${timePassed.toFixed(3)} seconds`);
+            console.log(`[Rate Limiter] Tokens before refill: ${bucket.tokens.toFixed(3)}`);
+            console.log(`[Rate Limiter] Tokens to add: ${tokensToAdd.toFixed(3)}`);
+            console.log(`[Rate Limiter] Tokens after refill: ${newTokens.toFixed(3)}`);
+        }
 
         // Check if we have enough tokens (at least 1)
         if (newTokens < 1) {
             const timeToNextToken = Math.ceil((1 - newTokens) / bucket.refillRate);
-            console.log(`[Rate Limiter] Rate limit exceeded. Retry after: ${timeToNextToken}s`);
+            
+            // Only log in non-production environments
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`[Rate Limiter] Rate limit exceeded. Retry after: ${timeToNextToken}s`);
+            }
             
             // Update the bucket with current time but keep tokens at current level
             // This prevents token accumulation during rate limiting
@@ -152,7 +180,9 @@ class TokenBucketLimiter {
         multi.expire(this.getKey(identifier), this.keyExpiry);
         await multi.exec();
 
-        console.log(`[Rate Limiter] Request allowed. Remaining tokens: ${Math.floor(remainingTokens)}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Rate Limiter] Request allowed. Remaining tokens: ${Math.floor(remainingTokens)}`);
+        }
         return {
             allowed: true,
             retryAfter: 0,
@@ -166,6 +196,12 @@ const createRateLimiter = (options = {}) => {
     const limiter = new TokenBucketLimiter(options);
     
     return async (req, res, next) => {
+        // Check if Redis is available, skip rate limiting if not available
+        if (!isRedisAvailable()) {
+            console.log('[Rate Limiter] Redis not available, skipping rate limiting');
+            return next();
+        }
+        
         try {
             // Get identifier (e.g., user ID or IP)
             const identifier = options.keyGenerator ? 
@@ -180,7 +216,9 @@ const createRateLimiter = (options = {}) => {
                     refillRate: options.defaultRefillRate || 10
                 };
 
-            console.log(`[Rate Limiter Debug] Request from ${identifier} with limits: bucket=${limits.bucketSize}, refill=${limits.refillRate}`);
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`[Rate Limiter Debug] Request from ${identifier} with limits: bucket=${limits.bucketSize}, refill=${limits.refillRate}`);
+            }
 
             const result = await limiter.isAllowed(
                 identifier,
@@ -195,7 +233,9 @@ const createRateLimiter = (options = {}) => {
             
             if (result.retryAfter > 0) {
                 res.set('Retry-After', result.retryAfter);
-                console.log(`[Rate Limiter Debug] Rate limited ${identifier}: retry after ${result.retryAfter}s`);
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`[Rate Limiter Debug] Rate limited ${identifier}: retry after ${result.retryAfter}s`);
+                }
             }
 
             if (!result.allowed) {
@@ -205,16 +245,22 @@ const createRateLimiter = (options = {}) => {
                 });
             }
 
-            console.log(`[Rate Limiter Debug] Request allowed for ${identifier}: ${result.remaining}/${limits.bucketSize} tokens remaining`);
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`[Rate Limiter Debug] Request allowed for ${identifier}: ${result.remaining}/${limits.bucketSize} tokens remaining`);
+            }
             next();
         } catch (error) {
             console.error(`[Rate Limiter Error] ${error.message}`);
-            // If Redis is down, allow the request (fail open)
-            if (options.failOpen) {
-                console.log(`[Rate Limiter Debug] Redis error but failOpen=true, allowing request`);
+            // If Redis is down or unavailable, follow the failOpen policy
+            if (options.failOpen || !isRedisAvailable()) {
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`[Rate Limiter Debug] Redis error or unavailable but failOpen=${options.failOpen}, allowing request`);
+                }
                 next();
             } else {
-                console.log(`[Rate Limiter Debug] Redis error and failOpen=false, rejecting request`);
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`[Rate Limiter Debug] Redis error and failOpen=false, rejecting request`);
+                }
                 next(error);
             }
         }

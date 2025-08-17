@@ -3,7 +3,7 @@ const { promisify } = require('util');
 
 // Load environment variables
 let redisClient;
-let redisEnabled = false;
+let redisEnabled = process.env.REDIS_ENABLED !== 'false'; // Default to enabled unless explicitly disabled
 
 /**
  * Initialize Redis client
@@ -11,11 +11,8 @@ let redisEnabled = false;
  */
 const initRedisClient = () => {
   try {
-    // Check if Redis is enabled via environment variable
-    redisEnabled = process.env.REDIS_ENABLED === 'true';
-    
     if (!redisEnabled) {
-      console.log('Redis caching is disabled');
+      console.log('Redis caching is explicitly disabled via environment variable');
       return null;
     }
     
@@ -46,6 +43,13 @@ const initRedisClient = () => {
       redisEnabled = true;
     });
     
+    client.on('ready', () => {
+      console.log('Redis Client Ready');
+      redisEnabled = true;
+      // Emit a ready event that can be listened to by other modules
+      client.emit('redis_ready', true);
+    });
+    
     return client;
   } catch (error) {
     console.error('Failed to initialize Redis:', error);
@@ -59,8 +63,15 @@ const initRedisClient = () => {
  * @returns {Object} Redis client
  */
 const getRedisClient = () => {
-  if (!redisClient && redisEnabled) {
+  if (!redisClient) {
     redisClient = initRedisClient();
+    
+    // Log whether we got a client
+    if (redisClient) {
+      console.log('Redis Client Initialized');
+    } else {
+      console.log('Redis Client Initialization Failed');
+    }
   }
   return redisClient;
 };
@@ -70,6 +81,10 @@ const getRedisClient = () => {
  * @returns {Boolean} Redis status
  */
 const isRedisAvailable = () => {
+  // Force initialization if not already done
+  if (!redisClient) {
+    getRedisClient();
+  }
   return redisEnabled && redisClient && redisClient.status === 'ready';
 };
 
