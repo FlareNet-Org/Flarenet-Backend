@@ -9,6 +9,11 @@ const buildQueue = require('./queues/buildQueue');
 const githubRoutes = require('./routes/githubRoutes');
 const authRoutes = require('./routes/autthRoutes');
 const chatbotRoutes = require("./routes/chatBotRoutes");
+const { getRedisClient } = require('./utils/redisClient');
+
+// Initialize Redis client early
+process.env.REDIS_ENABLED = 'true';
+const redisClient = getRedisClient();
 const deploymentValidationRoutes = require('./routes/deploymentValidationRoutes');
 const aiAnalysisRoutes = require('./routes/aiAnalysisRoutes');
 const { Worker: ThreadWorker } = require('worker_threads');
@@ -41,7 +46,7 @@ async function main() {
         const users = await prisma.user.findMany();
 
         // Log successful query result
-        // console.log('Successfully connected to the database and fetched users:', users);
+        console.log('Successfully connected to the database and fetched users:', users);
     } catch (error) {
         // Log any error that happens during the query
         console.error('Error connecting to the database or fetching users:', error);
@@ -55,7 +60,7 @@ const startWorkerThreads = () => {
     //start each workrt using seperate pareller threads
     workerFiles.forEach((file) => {
         const workerThread = new ThreadWorker(file);
-        // console.log(`started worker thread foe ${file}`);
+        // console.log(`started worker thread for ${file}`);
         workerThread.on('error', (err) => {
             console.error(`Error in worker thread for ${file}`, err);
         });
@@ -288,7 +293,8 @@ app.get('/getLogs/:id', async function (req, res) {
         });
     }
 });
-
+//main test for checking pg connection
+main();
 
 //starting worker threads
 
