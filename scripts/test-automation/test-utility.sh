@@ -145,7 +145,7 @@ check_database_connection() {
             echo -e "${YELLOW}Running ExCloud connectivity test...${NC}"
             
             # Test with prisma directly
-            npx prisma db execute --stdin <<EOF
+            npx prisma db execute --schema=./prisma/schema.prisma --stdin <<EOF
 SELECT 1 as test;
 EOF
             if [ $? -eq 0 ]; then

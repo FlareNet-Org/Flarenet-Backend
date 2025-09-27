@@ -78,7 +78,7 @@ fi
 
 # Test connectivity using prisma directly
 echo -e "${YELLOW}Testing database connectivity with Prisma...${NC}"
-npx prisma db execute --stdin <<EOF
+npx prisma db execute --schema=./prisma/schema.prisma --stdin <<EOF
 SELECT 1 as test;
 EOF
 
@@ -87,6 +87,7 @@ if [ $DB_RESULT -eq 0 ]; then
     echo -e "${GREEN}✓ Database connection successful${NC}"
 else
     echo -e "${RED}✗ Database connection failed${NC}"
+    echo -e "${YELLOW}Continuing with tests anyway...${NC}"
 fi
 
 # Run database tests
