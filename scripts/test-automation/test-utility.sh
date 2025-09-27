@@ -116,29 +116,70 @@ check_database_connection() {
         echo -e "${RED}✗ Database schema validation failed${NC}"
     fi
     
-    # Check if Docker is running and database container is available
-    echo -e "\n${YELLOW}Checking Docker database container...${NC}"
-    if command -v docker &> /dev/null; then
-        CONTAINER_RUNNING=$(docker ps --filter "name=flarenetbackend-postgres" --format "{{.Names}}" | grep postgres || echo "")
+    # Get database connection details
+    echo -e "\n${YELLOW}Checking database connection details...${NC}"
+    
+    # Extract connection details safely
+    getDbConfig() {
+        try_url=$(grep DATABASE_URL .env | cut -d '=' -f2- || echo "")
+        if [ -z "$try_url" ]; then
+            echo ""
+            return
+        fi
         
-        if [ -n "$CONTAINER_RUNNING" ]; then
-            echo -e "${GREEN}✓ PostgreSQL container is running: $CONTAINER_RUNNING${NC}"
+        # Extract the host from the URL
+        host=$(echo "$try_url" | grep -oP '(?<=@)[^:]+(?=:)' || echo "")
+        echo "$host"
+    }
+    
+    DB_HOST=$(getDbConfig)
+    
+    if [ -z "$DB_HOST" ]; then
+        echo -e "${RED}✗ Could not determine database host from .env file${NC}"
+    else
+        echo -e "${YELLOW}Database host: $DB_HOST${NC}"
+        
+        # Check if it's ExCloud
+        if [[ "$DB_HOST" == *"excloud"* ]]; then
+            echo -e "${GREEN}✓ Using ExCloud database instance${NC}"
+            echo -e "${YELLOW}Running ExCloud connectivity test...${NC}"
             
-            # Run a simple check query
-            echo -e "${YELLOW}Testing database connectivity...${NC}"
-            DB_TEST=$(docker exec -it $CONTAINER_RUNNING bash -c "psql -U postgres -d flarenet -c 'SELECT 1 as test;'" 2>&1)
-            
-            if [[ $DB_TEST == *"test"* ]]; then
-                echo -e "${GREEN}✓ Database connection successful${NC}"
+            # Test with prisma directly
+            npx prisma db execute --stdin <<EOF
+SELECT 1 as test;
+EOF
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ ExCloud database connection successful${NC}"
             else
-                echo -e "${RED}✗ Database connection failed${NC}"
-                echo -e "$DB_TEST"
+                echo -e "${RED}✗ ExCloud database connection failed${NC}"
             fi
         else
-            echo -e "${RED}✗ PostgreSQL container is not running${NC}"
+            echo -e "${YELLOW}⚠ Not using ExCloud - using $DB_HOST${NC}"
+            
+            # Check if Docker is involved
+            if command -v docker &> /dev/null; then
+                CONTAINER_RUNNING=$(docker ps --filter "name=flarenetbackend-postgres" --format "{{.Names}}" | grep postgres || echo "")
+                
+                if [ -n "$CONTAINER_RUNNING" ]; then
+                    echo -e "${GREEN}✓ PostgreSQL container is running: $CONTAINER_RUNNING${NC}"
+                    
+                    # Run a simple check query
+                    echo -e "${YELLOW}Testing Docker database connectivity...${NC}"
+                    DB_TEST=$(docker exec -it $CONTAINER_RUNNING bash -c "psql -U postgres -d flarenet -c 'SELECT 1 as test;'" 2>&1)
+                    
+                    if [[ $DB_TEST == *"test"* ]]; then
+                        echo -e "${GREEN}✓ Docker database connection successful${NC}"
+                    else
+                        echo -e "${RED}✗ Docker database connection failed${NC}"
+                        echo -e "$DB_TEST"
+                    fi
+                else
+                    echo -e "${RED}✗ PostgreSQL container is not running${NC}"
+                fi
+            else
+                echo -e "${YELLOW}⚠ Docker not found. Skipping container check.${NC}"
+            fi
         fi
-    else
-        echo -e "${YELLOW}⚠ Docker not found. Skipping container check.${NC}"
     fi
     
     read -p "Press Enter to continue..."

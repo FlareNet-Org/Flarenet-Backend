@@ -52,6 +52,34 @@ else
     echo -e "${YELLOW}See $LOG_FILE for details${NC}"
 fi
 
+# Extract connection details safely without exposing password in code
+getDbConfig() {
+  try_url=$(grep DATABASE_URL .env | cut -d '=' -f2- || echo "")
+  if [ -z "$try_url" ]; then
+    echo ""
+    return
+  fi
+
+  # Extract the host from the URL
+  host=$(echo "$try_url" | grep -oP '(?<=@)[^:]+(?=:)' || echo "")
+  echo "$host"
+}
+
+DB_HOST=$(getDbConfig)
+
+if [ -z "$DB_HOST" ]; then
+    echo -e "${RED}✗ Could not determine database host from .env file${NC}" >> $LOG_FILE
+else
+    echo -e "${YELLOW}Database host: $DB_HOST${NC}" | tee -a $LOG_FILE
+    
+    # Check if it's ExCloud
+    if [[ "$DB_HOST" == *"excloud"* ]]; then
+        echo -e "${GREEN}✓ Using ExCloud database instance${NC}" | tee -a $LOG_FILE
+    else
+        echo -e "${YELLOW}⚠ Not using ExCloud - using $DB_HOST${NC}" | tee -a $LOG_FILE
+    fi
+fi
+
 # Run all Jest tests
 echo -e "\n${YELLOW}Running all tests...${NC}"
 npm test | tee -a $LOG_FILE
