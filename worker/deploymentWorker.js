@@ -6,7 +6,7 @@ const failedQueue = require('../queues/failedQueue');
 const { llm, memory } = require("../utils/langchainConfig"); // Import LLM instance
 const kafka = require('../utils/kafkaClient');
 const clickHouseClient = require('../utils/clickHouseClient');
-const { v4: uuidv4 } = require('uuid');
+// UUID will be dynamically imported
 require('dotenv').config({ path: '../.env' });
 const axios = require('axios');
 
@@ -107,6 +107,8 @@ const classifyLogs = async (logMessage) => {
 
 //define worker to process jobs
 const deploymentWorker = new Worker('buildQueue', async (job) => {
+    // Dynamically import uuid
+    const { v4: uuidv4 } = await import('uuid');
     const { deploymentId, projectId, environment = "DEVELOPMENT", gitUrl, version = "v1.0.0", buildCommand, envVars } = job.data;
 
     // 1. Input Validation

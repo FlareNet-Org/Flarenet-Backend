@@ -1,8 +1,12 @@
 const axios = require('axios');
 require('dotenv').config({ path: '../.env' });
-const { Octokit } = require('@octokit/core');
+// Using dynamic import for ESM module
+let Octokit;
 
 async function createWebhookOcta(oauthToken, owner, repo) {
+    // Dynamically import Octokit
+    const { Octokit: OctokitModule } = await import('@octokit/core');
+    Octokit = OctokitModule;
 
     //create octokit instance using users oAuth  token
     const octokit = new Octokit({ auth: oauthToken });
