@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,26 +7,88 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//models project specific
-
-//users schema
 model User {
   id         Int         @id @default(autoincrement())
   email      String      @unique
-  password   String? // Hashed password for email-password authentication
   name       String?
   role       Role        @default(USER)
+  createdAt  DateTime    @default(now())
+  password   String?
+  OAuthToken OAuthToken?
   Profile    Profile?
   Project    Project[]
-  OAuthToken OAuthToken? //relation to oauth token model
-  createdAt  DateTime    @default(now())
 }
 
 model Profile {
   id     Int    @id @default(autoincrement())
   bio    String
-  user   User   @relation(fields: [userId], references: [id])
   userId Int    @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Project {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  gitUrl      String
+  description String?
+  ownerId     Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deployments Deployment[]
+  FailedJob   FailedJob[]
+  owner       User         @relation(fields: [ownerId], references: [id])
+
+  @@index([name])
+  @@index([gitUrl])
+}
+
+model Deployment {
+  id          String           @id @default(uuid()) @db.Uuid
+  projectId   String           @db.Uuid
+  environment Environment      @default(DEVELOPMENT)
+  status      DeploymentStatus @default(INACTIVE)
+  url         String?
+  logsUrl     String?
+  version     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  autoDeploy  Boolean          @default(false)
+  project     Project          @relation(fields: [projectId], references: [id])
+  FailedJob   FailedJob[]
+
+  @@index([environment])
+  @@index([status])
+}
+
+model FailedJob {
+  id              String          @id @default(uuid()) @db.Uuid
+  queueName       String
+  jobId           String          @unique
+  deploymentId    String?         @db.Uuid
+  projectId       String?         @db.Uuid
+  errorMessage    String
+  failedAt        DateTime        @default(now())
+  status          FailedJobStatus @default(PENDING)
+  retryCount      Int             @default(0)
+  lastProcessedAt DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deployment      Deployment?     @relation(fields: [deploymentId], references: [id])
+  project         Project?        @relation(fields: [projectId], references: [id])
+
+  @@index([queueName])
+  @@index([status])
+}
+
+model OAuthToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 enum Role {
@@ -40,7 +96,6 @@ enum Role {
   ADMIN
 }
 
-//project schema
 enum DeploymentStatus {
   PENDING
   ACTIVE
@@ -54,81 +109,10 @@ enum Environment {
   DEVELOPMENT
 }
 
-model Project {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String
-  gitUrl      String      
-  description String?
-  ownerId     Int
-  owner       User         @relation(fields: [ownerId], references: [id])
-  deployments Deployment[] // a project can have multiple deployments
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  FailedJob   FailedJob[]
-
-  @@index([name])
-  @@index([gitUrl])
-}
-
-model Deployment {
-  id          String           @id @default(uuid()) @db.Uuid
-  projectId   String           @db.Uuid // Ensure this is of the same type as the Project id
-  project     Project          @relation(fields: [projectId], references: [id])
-  environment Environment      @default(DEVELOPMENT) // Set default value to DEVELOPMENT
-  status      DeploymentStatus @default(INACTIVE)
-  url         String? // this will be final hosted URL of the user's project
-  logsUrl     String?
-  version     String? // Optional version or tag of the deployment
-  autoDeploy  Boolean          @default(false) // New field to track auto-deployment
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  FailedJob   FailedJob[]
-
-  @@index([environment])
-  @@index([status]) // Index for efficient status filtering
-}
-
-//for escalating the failed jobs
-model FailedJob {
-  id              String          @id @default(uuid()) @db.Uuid
-  queueName       String // Name of the queue where the job originated (e.g., 'buildQueue')
-  jobId           String          @unique // Unique identifier for the failed job in BullMQ
-  deploymentId    String?         @db.Uuid // Related deployment ID, if applicable
-  projectId       String?         @db.Uuid // Related project ID, if applicable
-  errorMessage    String // Error message or reason for failure
-  failedAt        DateTime        @default(now()) // Timestamp when the job failed
-  status          FailedJobStatus @default(PENDING) // Current status of the failed job
-  retryCount      Int             @default(0) // Number of retry attempts
-  lastProcessedAt DateTime? // Timestamp of the last retry or processing attempt
-  createdAt       DateTime        @default(now()) // Creation timestamp
-  updatedAt       DateTime        @updatedAt // Updated timestamp
-
-  // Relations
-  deployment Deployment? @relation(fields: [deploymentId], references: [id])
-  project    Project?    @relation(fields: [projectId], references: [id])
-
-  @@index([queueName])
-  @@index([status])
-}
-
-// Enum for Failed Job Status
 enum FailedJobStatus {
-  PENDING // Waiting for review or processing
-  RETRYING // Currently being retried
-  RESOLVED // Successfully reprocessed or resolved
-  ESCALATED // Escalated for manual review or intervention
-  DISCARDED // No longer relevant and discarded
-}
-
-// OAuth token model
-model OAuthToken {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  token     String // This would ideally be encrypted
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([userId]) // Index for fast lookup by user
+  PENDING
+  RETRYING
+  RESOLVED
+  ESCALATED
+  DISCARDED
 }

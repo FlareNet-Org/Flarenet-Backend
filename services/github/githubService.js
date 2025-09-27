@@ -1,4 +1,5 @@
-const { Octokit } = require('@octokit/core');
+// Using dynamic import for ESM module
+let Octokit;
 const { getRedisClient, isRedisAvailable } = require('../../utils/redisClient');
 
 class GitHubService {
@@ -16,7 +17,13 @@ class GitHubService {
    * @param {String} token - GitHub token
    * @returns {Object} Octokit instance
    */
-  createOctokitClient(token) {
+  async createOctokitClient(token) {
+    // Dynamically import Octokit if not already loaded
+    if (!Octokit) {
+      const { Octokit: OctokitModule } = await import('@octokit/core');
+      Octokit = OctokitModule;
+    }
+    
     if (!token) {
       throw new Error('GitHub token is required');
     }
@@ -74,7 +81,7 @@ class GitHubService {
     }
 
     try {
-      const octokit = this.createOctokitClient(token);
+      const octokit = await this.createOctokitClient(token);
       
       const response = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
         owner,

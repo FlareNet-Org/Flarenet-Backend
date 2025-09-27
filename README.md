@@ -131,6 +131,38 @@ npm start
 npm test
 ```
 
+## Security Practices
+
+### Database Connection Security
+
+The application uses secure methods for handling database credentials:
+
+- Connection strings are parsed using the URL API instead of regex extraction
+- Credentials are not exposed in logs or error messages
+- Database passwords are only used for their intended purpose
+- Test files include conditional execution to prevent unnecessary connection attempts
+
+Example of secure database configuration:
+
+```javascript
+// Extract connection details safely without exposing password in code
+const getDbConfig = () => {
+  try {
+    const url = new URL(process.env.DATABASE_URL || '');
+    return {
+      user: url.username,
+      password: url.password, // Will be used securely and not logged
+      host: url.hostname,
+      port: parseInt(url.port || '5432'),
+      database: url.pathname.substring(1).split('?')[0]
+    };
+  } catch (e) {
+    console.error('Invalid connection string format');
+    return { user: '', password: '', host: '', port: 5432, database: '' };
+  }
+};
+```
+
 ## License
 
 MIT 
