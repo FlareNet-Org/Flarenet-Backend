@@ -19,15 +19,16 @@ const aiAnalysisRoutes = require('./routes/aiAnalysisRoutes');
 const { Worker: ThreadWorker } = require('worker_threads');
 
 const app = express();
-app.use(cors({ origin: '*' })); //mainn cross origin middlware to allow traffic form anywhere
+app.use(cors({ origin: '*' })); //main cross origin middleware to allow traffic from anywhere
 
 const PORT = 5000;
 
-
-//middlewares trakcs
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Express 5.x middleware configuration
+// Note: Express 5 has some breaking changes from Express 4
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Disable X-Powered-By header for security
+app.disable('x-powered-by');
 //routes
 app.use('/api/github', githubRoutes);
 app.use('/api/auth', authRoutes);

@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest --detectOpenHandles --forceExit",
     "start": "node index.js",
-    "test:rate-limit": "node scripts/rate-limit-test.js",
+    "test:deps": "node scripts/dependency-stability-test.js",
     "benchmark:rate-limit": "node scripts/rate-limit-benchmark.js",
     "security:rate-limit": "node scripts/rate-limit-security-test.js",
     "config:rate-limit": "node scripts/rate-limit-config-generator.js",
