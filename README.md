@@ -127,8 +127,37 @@ npm start
 
 ### Running Tests
 
+Basic test execution:
+
 ```bash
 npm test
+```
+
+### Automated Test Scripts
+
+The project includes several automated test scripts to streamline development workflows:
+
+```bash
+# On Linux/Mac/Git Bash:
+./scripts/test-automation/test-utility.sh
+
+# On Windows:
+scripts\test-automation\run-tests.bat
+```
+
+Available test automation scripts:
+
+- **run-all-tests.sh**: Runs all tests with comprehensive reporting
+- **run-db-tests.sh**: Focuses on database-specific tests
+- **pre-commit-tests.sh**: Quick tests to run before committing changes
+- **run-ci-tests.sh**: Complete test suite for CI environments
+- **security-check.sh**: Performs security audits
+- **install-git-hooks.sh**: Sets up Git hooks for automated testing
+
+To install Git hooks for automated testing:
+
+```bash
+./scripts/test-automation/install-git-hooks.sh
 ```
 
 ## Security Practices
