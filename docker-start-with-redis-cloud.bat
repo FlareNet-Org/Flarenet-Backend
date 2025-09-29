@@ -1,0 +1,3 @@
+@echo off
+echo Starting Docker services without local Redis (using Redis Cloud instead)...
+docker-compose -f docker-compose.redis-cloud.yml up

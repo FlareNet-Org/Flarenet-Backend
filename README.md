@@ -111,11 +111,17 @@ Create a `.env` file with:
 PORT=3000
 NODE_ENV=development
 
-# Redis (optional)
+# Redis Configuration
+# Option 1: Redis Cloud (preferred for production)
+REDIS_URL=redis://:password@redis-15621.crce217.ap-south-1-1.ec2.redns.redis-cloud.com:15621
+REDIS_USE_TLS=true
 REDIS_ENABLED=true
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
+
+# Option 2: Local Redis (for development)
+# REDIS_ENABLED=true
+# REDIS_HOST=localhost
+# REDIS_PORT=6379
+# REDIS_PASSWORD=
 ```
 
 ### Running the Server
@@ -162,6 +168,25 @@ To install Git hooks for automated testing:
 
 ## Security Practices
 
+### Redis Cloud Configuration
+
+The application supports connecting to Redis Cloud for production environments:
+
+- Connection uses the full Redis URL format with proper authentication
+- TLS support for secure connection to Redis Cloud
+- Fallback to local Redis for development environments
+- Enhanced error handling and reconnection strategies
+- Automatic queue configuration based on available connection method
+
+Example Redis Cloud configuration in .env:
+
+```
+# Redis Cloud configuration
+REDIS_URL=redis://:password@redis-15621.crce217.ap-south-1-1.ec2.redns.redis-cloud.com:15621
+REDIS_USE_TLS=true
+REDIS_ENABLED=true
+```
+
 ### Database Connection Security
 
 The application uses secure methods for handling database credentials:
@@ -191,6 +216,55 @@ const getDbConfig = () => {
   }
 };
 ```
+
+## Redis Integration
+
+The FlareNet Backend can be configured to use either local Redis (via Docker) or Redis Cloud:
+
+### Local Redis (Development)
+
+By default, the application uses a Redis instance provided by Docker Compose. This is configured in the `.env` file.
+
+### Redis Cloud (Production)
+
+For production environments, the application is configured to use Redis Cloud with enhanced connection management:
+
+1. Configure your Redis Cloud credentials in the `.env.redis-cloud` file
+2. Start the application using the provided scripts:
+
+```bash
+# Windows
+.\start-with-redis-cloud.bat
+
+# Linux/macOS
+./start-with-redis-cloud.sh
+
+# Docker
+docker-compose -f docker-compose.redis-cloud.yml up
+```
+
+For detailed instructions on setting up and configuring Redis Cloud, see [Redis Cloud Setup Guide](docs/REDIS_CLOUD_SETUP.md).
+
+> **IMPORTANT:** For security best practices and handling sensitive information in this project, see [Security Guidelines](docs/SECURITY.md).
+
+### Verifying Database Services
+
+To verify that your Redis and PostgreSQL services are configured correctly, run:
+
+```bash
+# Run the database verification script
+node scripts/verify-database-services.js
+```
+
+This script checks:
+- Redis Cloud configuration and connection
+- PostgreSQL configuration and connection
+- Security issues like exposed credentials
+
+For detailed verification steps, see [Database Verification Guide](docs/DATABASE_VERIFICATION.md).
+```
+
+For detailed instructions on setting up and using Redis Cloud, see [Redis Cloud Integration Guide](./docs/REDIS_CLOUD.md).
 
 ## License
 

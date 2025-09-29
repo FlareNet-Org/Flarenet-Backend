@@ -9,6 +9,7 @@ jspm_packages/
 .env.test
 .env.production
 .env*.local
+.env.redis-cloud
 
 # Logs
 logs
