@@ -3,7 +3,45 @@ const clickHouseClient = require('./utils/clickHouseClient');
 const { prisma } = require('./utils/prismaClient');
 const { z } = require("zod");
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env.development') });
+const dotenv = require('dotenv');
+
+// Load environment variables - prioritize explicitly passed path first,
+// then try Redis Cloud config, then fall back to development
+const configPath = process.env.dotenv_config_path;
+const redisCloudPath = path.resolve(__dirname, '.env.redis-cloud');
+const defaultEnvPath = path.resolve(__dirname, '.env.development');
+
+// Load Redis Cloud configuration if the REDIS_CLOUD env var is set
+if (process.env.REDIS_CLOUD === 'true') {
+  console.log('REDIS_CLOUD flag is true, loading Redis Cloud configuration exclusively');
+  dotenv.config({ path: redisCloudPath, override: true });
+} 
+// If a specific path was provided via command line, use that exclusively
+else if (configPath) {
+  console.log(`Loading configuration from command line path: ${configPath}`);
+  dotenv.config({ path: configPath });
+} 
+// Otherwise try Redis Cloud first, then default
+else {
+  console.log('Loading Redis Cloud configuration first, then development config');
+  // Force Redis Cloud by setting environment variable before loading config
+  process.env.REDIS_CLOUD = 'true';
+  dotenv.config({ path: redisCloudPath, override: true });
+  // Only load development config for non-Redis settings
+  dotenv.config({ path: defaultEnvPath });
+}
+
+// Log the loaded configuration
+console.log('========= REDIS CONFIGURATION =========');
+console.log('Active Redis URL:', process.env.REDIS_URL ? 'Defined (using Redis Cloud)' : 'Undefined (using local Redis)');
+console.log('Redis TLS:', process.env.REDIS_USE_TLS);
+console.log('Redis Host:', process.env.REDIS_HOST);
+console.log('Redis Port:', process.env.REDIS_PORT);
+console.log('Redis Connection Timeout:', process.env.REDIS_CONNECT_TIMEOUT || '30000');
+console.log('Redis Retry Strategy Enabled:', process.env.REDIS_RETRY_STRATEGY || 'false');
+console.log('Redis Max Retries:', process.env.REDIS_MAX_RETRIES || '10');
+console.log('=========================================');
+
 const cors = require('cors');
 const buildQueue = require('./queues/buildQueue');
 const githubRoutes = require('./routes/githubRoutes');
