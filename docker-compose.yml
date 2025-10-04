@@ -20,13 +20,12 @@ services:
     command: postgres -c 'max_connections=100' -c 'shared_buffers=128MB'
 
   clickhouse:
-    image: clickhouse/clickhouse-server:latest
+    image: flarenet-clickhouse:local
     ports:
       - "8123:8123"
       - "9000:9000"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
-      - ./clickhouse-config:/etc/clickhouse-server/config.d
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=default
