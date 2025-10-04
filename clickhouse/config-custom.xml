@@ -1,0 +1,15 @@
+<clickhouse>
+    <logger>
+        <level>information</level>
+        <console>true</console>
+    </logger>
+    
+    <!-- Set memory limits -->
+    <max_server_memory_usage>8000000000</max_server_memory_usage>
+    
+    <!-- Network configuration -->
+    <listen_host>0.0.0.0</listen_host>
+    
+    <!-- Disable statistics -->
+    <send_crash_reports>false</send_crash_reports>
+</clickhouse>
