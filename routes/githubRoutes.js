@@ -10,6 +10,7 @@ const {handlePushEvent}=require('../auth/webEventHandelers');
 const router = express.Router();
 
 router.get('/auth-url', githubRedirect);
+router.get('/callback', githubCallback);
 router.post('/token', githubCallback);
 // router.post('/save-token', saveAccessToken);
 

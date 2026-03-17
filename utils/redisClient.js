@@ -1,24 +1,13 @@
 const Redis = require('ioredis');
 const { promisify } = require('util');
-const path = require('path');
-const dotenv = require('dotenv');
-
-// Explicitly load Redis Cloud environment variables first, then fall back to default .env
-const redisCloudPath = path.resolve(__dirname, '..', '.env.redis-cloud');
-const defaultEnvPath = path.resolve(__dirname, '..', '.env');
-
-// Load Redis Cloud config with higher priority and override existing values
-dotenv.config({ path: redisCloudPath, override: true });
-dotenv.config({ path: defaultEnvPath });
-
-console.log('Redis environment loaded from:', redisCloudPath);
-console.log('Redis URL from env:', process.env.REDIS_URL ? 'YES (defined)' : 'NO (undefined)');
 
 // Redis client variables
 let redisClient;
 let redisEnabled = process.env.REDIS_ENABLED !== 'false'; // Default to enabled unless explicitly disabled
 let connectionAttempts = 0;
 const MAX_CONNECTION_ATTEMPTS = 5;
+
+console.log('Redis URL from env:', process.env.REDIS_URL ? 'YES (configured)' : 'NO (not set)');
 
 /**
  * Initialize Redis client
@@ -88,10 +77,11 @@ const initRedisClient = () => {
       return new Redis(process.env.REDIS_URL, connectionOptions);
     }
     
-    // Fallback to individual connection parameters
+    // Fallback to individual connection parameters (use 'redis' for Docker, 'localhost' for local)
+    const defaultHost = process.env.NODE_ENV === 'development' ? 'redis' : 'localhost';
     console.log('WARNING: No valid Redis URL found, falling back to individual parameters');
     const redisConfig = {
-      host: process.env.REDIS_HOST || 'localhost',
+      host: process.env.REDIS_HOST || defaultHost,
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
       password: process.env.REDIS_PASSWORD || undefined,
       maxRetriesPerRequest: null, // BullMQ requires this to be null

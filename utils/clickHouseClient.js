@@ -1,11 +1,8 @@
 const { createClient } = require('@clickhouse/client');
-const path = require('path');
-require('dotenv').config({ 
-  path: path.resolve(__dirname, '../.env.development') 
-});
 
+// Environment variables are loaded by index.js
 const clickHouseClient = createClient({
-    url: process.env.CH_URI || 'http://localhost:8123',
+    url: process.env.CH_URI || 'http://clickhouse:8123',
     username: process.env.CH_USERNAME || 'default',
     password: process.env.CH_PASS || 'default',
     format: 'json',

@@ -1,5 +1,6 @@
 const { Kafka } = require('kafkajs');
-require('dotenv').config({ path: '../.env.development' });
+
+// Environment variables are loaded by index.js
 const kafka = new Kafka({
     clientId: `api-server-receiver_side`,
     brokers: [`${process.env.KAFKA_BROKER}`],

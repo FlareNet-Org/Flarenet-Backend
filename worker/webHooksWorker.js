@@ -50,7 +50,7 @@ const webHookTaskBuilder = new Worker('webHookQueue', async (job) => {
     }
 }, {
     connection: {
-        url: process.env.REDIS_HOST, // Use environment variable or fallback
+        url: process.env.REDIS_URL, // Use REDIS_URL from environment
     }
 });
 

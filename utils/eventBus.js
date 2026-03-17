@@ -3,7 +3,7 @@ const { Kafka } = require('kafkajs');
 // Initialize Kafka instance
 const kafka = new Kafka({
     clientId: 'deployment-service', // Unique name for your app
-    brokers: ['localhost:9092'], // The address of your Kafka broker(s)
+    brokers: [process.env.KAFKA_BROKER || 'kafka:9092'], // Use env var or default to Docker service name
 });
 
 // Create a Kafka producer

@@ -2,7 +2,6 @@ const express = require("express");
 const { chatbotController } = require("../utils/features/chatBotController");
 const router = express.Router();
 const createRateLimiter = require("../middlewares/tokenBucketLimiter");
-const colors = require('colors');
 
 // Rate limiter configuration for chat endpoint
 
@@ -24,7 +23,7 @@ const chatRateLimiter = createRateLimiter({
             pro: { bucketSize: 30, refillRate: 0.5 },     // 30 requests, refills 1 per 2 sec
             enterprise: { bucketSize: 60, refillRate: 1 } // 60 requests, refills 1 per sec
         };
-        console.log(`user plan is ${colors.green(userPlan)} with bucketSize: ${colors.yellow(limits[userPlan].bucketSize)}, refillRate: ${colors.yellow(limits[userPlan].refillRate)}`);
+        console.log(`user plan is ${userPlan} with bucketSize: ${limits[userPlan].bucketSize}, refillRate: ${limits[userPlan].refillRate}`);
         return limits[userPlan] || limits.free;
     },
     failOpen: false // Don't allow requests if Redis is down - better for testing

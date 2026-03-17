@@ -2,9 +2,9 @@ FROM node:20-slim
 
 WORKDIR /usr/src/app
 
-# Install OpenSSL and other required dependencies
+# Install OpenSSL, CA certificates and other required dependencies
 RUN apt-get update -y && \
-    apt-get install -y openssl && \
+    apt-get install -y openssl ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

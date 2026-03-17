@@ -1,20 +1,15 @@
 const { prisma } = require("../prismaClient");
 const buildQueue = require("../../queues/buildQueue");
 const { llm, memory } = require("../../utils/langchainConfig");
-const Redis = require("ioredis");
-require('dotenv').config();
+const { getRedisClient } = require("../redisClient");
 
-// Initialize Redis client
-const redis = new Redis(process.env.REDIS_HOST, {
-    retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-    },
-    maxRetriesPerRequest: 3
-});
+// Use shared Redis client
+const redis = getRedisClient();
 
-redis.on('error', (err) => console.error('Redis Client Error:', err));
-redis.on('connect', () => console.log('Redis Client Connected'));
+if (redis) {
+    redis.on('error', (err) => console.error('Redis Client Error:', err));
+    redis.on('connect', () => console.log('Redis Client Connected'));
+}
 
 // Helper function to clean LLM responses
 function cleanLLMResponse(response) {

@@ -1,11 +1,12 @@
 const axios = require('axios');
 const { prisma } = require('../utils/prismaClient');
-require('dotenv').config({ path: '../.env' });
 const crypto = require('crypto');
-//required vars
+const jwt = require('jsonwebtoken');
+
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // 1. Redirect user to GitHub authentication
 function getGitHubAuthUrl() {
@@ -79,7 +80,7 @@ async function saveAccessToken(userId, accessToken) {
         }
     }
     catch (e) {
-        console.error('Error saving access token:', error);
+        console.error('Error saving access token:', e);
         throw new Error('Failed to save access token');
     }
 
@@ -98,29 +99,41 @@ async function githubRedirect(req, res) {
         });
     }
 }
-// Route 2: Handle GitHub OAuth callback and exchange code for access token
 async function githubCallback(req, res) {
-    const { code } = req.query;
+    const { code } = req.query || req.body;
     if (!code) {
-        return res.status(400).json({ message: 'Missing code parameter' });
+        return res.redirect(`${FRONTEND_URL}/auth/error?message=Missing+code+parameter`);
     }
 
     try {
         const accessToken = await exchangeCodeForToken(code);
-        // res.json({ message: 'Access token received', accessToken });
-       
+        const githubUser = await getUserInfoHelper(accessToken);
 
-        //needs to be saved in database
+        let user = await prisma.user.findFirst({
+            where: { email: githubUser.email || `${githubUser.login}@github.local` }
+        });
 
-        //get userId from anyWhere
-        // const userId = req.user.id;
-        const userId = 1;
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    email: githubUser.email || `${githubUser.login}@github.local`,
+                    name: githubUser.name || githubUser.login,
+                }
+            });
+        }
 
-        await saveAccessToken(userId, accessToken);
+        await saveAccessToken(user.id, accessToken);
 
-        res.json({ success: true, message: 'Access token received and stored in database', accessToken: accessToken });
+        const token = jwt.sign(
+            { userId: user.id, email: user.email, role: user.role, githubLogin: githubUser.login },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.redirect(`${FRONTEND_URL}/new/callback?token=${token}`);
     } catch (error) {
-        res.status(400).json({success:false, message: error.message });
+        console.error('GitHub OAuth error:', error.message);
+        res.redirect(`${FRONTEND_URL}/new/callback?error=${encodeURIComponent(error.message)}`);
     }
 }
 
@@ -157,23 +170,46 @@ async function fetchRepositoriesFromGitHub(accessToken) {
 }
 
 
-//caller files
-async function getUserInfo(req, res) {
-    try {
-        //get access token form query or body or from any source might be temp database
-        let accessToken = req.query.accessToken || req.body.accessToken;
+async function getGitHubTokenFromJWT(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
 
-        if (!accessToken) {
-            return res.status(400).json({ message: 'Missing access token' });
+    try {
+        const token = authHeader.slice(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        const oauthToken = await prisma.oAuthToken.findUnique({
+            where: { userId: decoded.userId }
+        });
+
+        if (!oauthToken) {
+            return null;
         }
 
-        //fetch user info using provided access token
-        const userInfo = await getUserInfoHelper(accessToken);
-
-        //send user infor in response
-        res.json(userInfo);
+        return decryptToken(oauthToken.token);
+    } catch (error) {
+        console.error('Error extracting GitHub token from JWT:', error.message);
+        return null;
     }
-    catch (err) {
+}
+
+async function getUserInfo(req, res) {
+    try {
+        let accessToken = req.query?.accessToken || req.body?.accessToken;
+
+        if (!accessToken) {
+            accessToken = await getGitHubTokenFromJWT(req);
+        }
+
+        if (!accessToken) {
+            return res.status(401).json({ success: false, message: 'Missing access token or invalid authorization' });
+        }
+
+        const userInfo = await getUserInfoHelper(accessToken);
+        res.json(userInfo);
+    } catch (err) {
         res.status(500).send({
             success: false,
             message: 'error fetching user info',
@@ -184,14 +220,16 @@ async function getUserInfo(req, res) {
 
 async function listRepositories(req, res) {
     try {
-        //get access token from query or body
-        let accessToken = req.query.accessToken || req.body.accessToken;
+        let accessToken = req.query?.accessToken || req.body?.accessToken;
 
         if (!accessToken) {
-            return res.status(400).json({ message: 'Missing access token' });
+            accessToken = await getGitHubTokenFromJWT(req);
         }
 
-        //fetch repositories using provided access token
+        if (!accessToken) {
+            return res.status(401).json({ success: false, message: 'Missing access token or invalid authorization' });
+        }
+
         const repositories = await fetchRepositoriesFromGitHub(accessToken);
 
         //send repositories in the response
@@ -238,12 +276,12 @@ function encryptToken(token) {
 //decrypt token when needed
 function decryptToken(encryptedData) {
     const algorithm = 'aes-256-cbc';
-    const secretKey = process.env.SECRET_KEY; // Securely stored key
-    const { token, iv } = JSON.parse(encryptedData); // Parse stored JSON
+    const secretKey = process.env.SECRET_KEY;
+    const { token, iv } = JSON.parse(encryptedData);
 
     const decipher = crypto.createDecipheriv(
         algorithm,
-        Buffer.from(secretKey, 'hex'),
+        secretKey,
         Buffer.from(iv, 'hex')
     );
 
